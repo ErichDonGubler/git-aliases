@@ -36,6 +36,9 @@ enum Subcommand {
         base: Option<String>,
         #[clap(flatten)]
         config: PresetConfig,
+        // TODO: Allow branches to be specified, but not error if they don't exist.
+        #[clap(long = "and")]
+        additional_branches: Vec<String>,
         #[clap(flatten)]
         files: FileSelection,
     },
@@ -93,6 +96,7 @@ fn main() {
                 select_pushes: false,
                 select_last_tag: false,
             },
+            additional_branches: vec![],
             files: FileSelection { files: vec![] },
         });
         let current_branch = || {
@@ -154,6 +158,7 @@ fn main() {
             Subcommand::Stack {
                 base,
                 config,
+                additional_branches,
                 files: FileSelection { files },
             } => {
                 let specified_base = base
@@ -166,7 +171,7 @@ fn main() {
                     default
                 });
 
-                let branches = if let Some(current_branch) = current_branch()? {
+                let mut branches = if let Some(current_branch) = current_branch()? {
                     let mut config = config;
                     if current_branch == base {
                         config.select_upstreams = true;
@@ -182,6 +187,7 @@ fn main() {
                     branches.push("HEAD".to_owned());
                     branches
                 };
+                branches.extend(additional_branches.into_iter());
                 (branches, files)
             }
             Subcommand::Locals {
